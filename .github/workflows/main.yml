@@ -1,0 +1,46 @@
+name: Maven CI with SonarQube
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_HOST_URL: 'https://your-sonarqube-server.com'  # Replace with your SonarQube server
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v3
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'  # or 11 if that's what your project uses
+
+      - name: Cache Maven packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-maven
+
+      - name: Clean project
+        run: mvn clean
+
+      - name: Run SonarQube Analysis
+        run: mvn verify sonar:sonar -Dsonar.projectKey=your_project_key -Dsonar.host.url=${{ env.SONAR_HOST_URL }} -Dsonar.login=${{ env.SONAR_TOKEN }}
+
+      - name: Wait for Quality Gate
+        uses: sonarsource/sonarqube-quality-gate-action@v1.1.0
+        with:
+          sonar-token: ${{ secrets.SONAR_TOKEN }}
+          project-key: your_project_key
+          server-url: ${{ env.SONAR_HOST_URL }}
+
